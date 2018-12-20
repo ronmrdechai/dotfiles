@@ -1,0 +1,22 @@
+[extensions]
+extdiff =
+
+[extdiff]
+cmd.vimdiff = vimdiff
+
+[diff]
+word-diff = true
+
+[alias]
+bk = bookmark
+df = diff
+pl = pull
+st = status
+l = ssl
+master = !$HG pull && $HG update master
+difftool = !for file in $(hg status -n); do hg vimdiff $file; done
+
+[hint]
+ack = sl-short-headers
+
+%include ~/.hgrc-local

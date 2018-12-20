@@ -1,0 +1,31 @@
+[alias]
+	br = branch
+	ci = commit
+	co = checkout
+	df = diff --word-diff
+	dt = difftool
+	l = log --oneline --decorate --graph
+	mt = mergetool
+	pl = pull
+	ps = push
+	root = rev-parse --show-toplevel
+	st = status -sb
+   	cl = clone
+[push]
+	default = simple
+[diff]
+	tool = vimdiff
+	guitool = opendiff
+[difftool]
+	prompt = false
+[filter "media"]
+	clean = git media clean %f
+	smudge = git media smudge %f
+	required = true
+[merge]
+	tool = vimdiff
+[mergetool]
+	prompt = false
+	keepBackup = true
+[include]
+    path = ~/.gitconfig-local

@@ -1,0 +1,18 @@
+set completion-ignore-case on
+set show-all-if-ambiguous on
+
+"\e[1;5C": forward-word
+"\eOC":    forward-word
+"\e[1;5D": backward-word
+"\eOD":    backward-word
+
+"\e[3;5~": delete-char
+"\e[3;2~": delete-char
+
+"\e\e": "\C-a\C-k"
+
+$if Bash
+    "\C-xp": "$(!!\e^)"
+    "\C-xs": "sudo !!\e^"
+    "\C-xe": glob-expand-word
+$endif
