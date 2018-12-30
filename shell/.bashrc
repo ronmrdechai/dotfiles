@@ -77,6 +77,13 @@ if [[ -d "$HOME/pkg" ]]; then
     export MANPATH="$HOME/pkg/share/man:$MANPATH"
 fi
 
+# Home directory bash completions
+if [[ -d "$HOME/.bash_completion.d" ]]; then
+    for file in $HOME/.bash_completion.d/*; do
+        source $file
+    done
+fi
+
 # Edit and source ~/.bashrc
 bashrc () {
     $EDITOR $HOME/.bashrc && . $HOME/.bashrc
