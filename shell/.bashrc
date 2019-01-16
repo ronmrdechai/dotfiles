@@ -126,6 +126,22 @@ if [[ ${PLATFORM} == "Darwin" ]]; then
         dot -Tpng $1 -o ${temp}.png && ql ${temp}.png
         rm ${temp}.png
     }
+
+    # Run clang-format and produce a diff of changes
+    function clang-format-diff {
+        [[ $# -eq 0 ]] && ( \
+            echo "Usage: clang-format-diff <file> [<file>...]"
+            return
+        )
+
+        for file in "$@"; do
+            wdiff -n \
+                -w $'\033[30;41m' -x $'\033[0m' \
+                -y $'\033[30;42m' -z $'\033[0m' \
+                <(clang-format $file) \
+                               $file
+        done
+    }
 fi
 
 # Open tmux if installed
