@@ -10,6 +10,7 @@ shopt -s no_empty_cmd_completion
 
 # General options
 export EDITOR=vim
+export PAGER=less
 export HISTCONTROL="ignoredups:erasedups"
 export LESSHISTFILE=-
 export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git --ignore .hg -g ""'
@@ -129,13 +130,19 @@ if [[ ${PLATFORM} == "Darwin" ]]; then
 
     # Run clang-format and produce a diff of changes
     function clang-format-diff {
-        [[ $# -eq 0 ]] && ( \
-            echo "Usage: clang-format-diff <file> [<file>...]"
+        local args=()
+        while grep -q "^-" <<< "$1"; do
+            args+=("$1")
+            shift
+        done
+
+        if [[ $# -eq 0 ]]; then
+            echo "Usage: clang-format-diff [options...] <file> [<file>...]"
             return
-        )
+        fi
 
         for file in "$@"; do
-            wdiff -n \
+            wdiff "${args[@]}" -n \
                 -w $'\033[30;41m' -x $'\033[0m' \
                 -y $'\033[30;42m' -z $'\033[0m' \
                 <(clang-format $file) \
