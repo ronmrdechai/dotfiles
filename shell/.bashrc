@@ -142,11 +142,7 @@ if [[ ${PLATFORM} == "Darwin" ]]; then
         fi
 
         for file in "$@"; do
-            wdiff "${args[@]}" -n \
-                -w $'\033[30;41m' -x $'\033[0m' \
-                -y $'\033[30;42m' -z $'\033[0m' \
-                <(clang-format $file) \
-                               $file
+            clang-format $file | colordiff "${args[@]}" $file -
         done
     }
 fi
