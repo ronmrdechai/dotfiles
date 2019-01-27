@@ -12,7 +12,7 @@ set show-all-if-ambiguous on
 "\e\e": "\C-a\C-k"
 
 $if Bash
-    "\C-xp": "$(!!\e^)"
-    "\C-xs": "sudo !!\e^"
-    "\C-xe": glob-expand-word
+  "\C-xp": "$(!!\e^)"
+  "\C-xs": "sudo !!\e^"
+  "\C-xe": glob-expand-word
 $endif

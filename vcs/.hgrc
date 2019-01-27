@@ -20,3 +20,6 @@ difftool = !for file in $(hg status -n); do hg vimdiff $file; done
 ack = sl-short-headers
 
 %include ~/.hgrc-local
+
+[hint]
+ack = sl-short-headers undo
