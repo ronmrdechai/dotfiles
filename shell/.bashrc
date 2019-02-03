@@ -147,6 +147,11 @@ if [[ ${PLATFORM} == "Darwin" ]]; then
   }
 fi
 
+# Source custom, untracked configurations
+for bashrc in $HOME/.bash.*; do
+  [[ -f "${bashrc}" ]] && source "${bashrc}"
+done
+
 # Open tmux if installed
 if [[ -z "${TMUX}" && "${PLATFORM}" == "Darwin" ]]; then
   command -v tmux >/dev/null && tm
