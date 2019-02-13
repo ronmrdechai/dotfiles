@@ -67,15 +67,18 @@ fi
 alias vi="vim"
 alias sudo="sudo "
 
-# LS_COLORS on Linux
 if [[ ${PLATFORM} = "Linux" ]]; then
+  # Custom LS_COLORS
   [[ -f $HOME/.ls_colors ]] && eval $(dircolors -b $HOME/.ls_colors)
-fi
 
-# Home directory pkgsrc
-if [[ -d "$HOME/pkg" ]]; then
-  export PATH="$HOME/pkg/bin:$HOME/pkg/sbin:$PATH"
-  export MANPATH="$HOME/pkg/share/man:$MANPATH"
+  # Home directory Gentoo prefix or pkgsrc
+  if [[ -d "$HOME/gentoo" ]]; then
+    export PATH="$HOME/gentoo/bin:$HOME/gentoo/sbin:$PATH"
+    export MANPATH="$HOME/gentoo/share/man:$MANPATH"
+  elif [[ -d "$HOME/pkg" ]]; then
+    export PATH="$HOME/pkg/bin:$HOME/pkg/sbin:$PATH"
+    export MANPATH="$HOME/pkg/share/man:$MANPATH"
+  fi
 fi
 
 # Home directory bash completions
