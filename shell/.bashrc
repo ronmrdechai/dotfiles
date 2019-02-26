@@ -16,6 +16,7 @@ export LESSHISTFILE=-
 export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git --ignore .hg -g ""'
 export PATH="$PATH:$HOME/.bin"
 export PLATFORM=$(uname)
+export PYTHONWARNINGS=ignore
 
 [[ -d "$HOME/.vim/bin" ]] && PATH="$HOME/.vim/bin:$PATH"
 
@@ -154,8 +155,3 @@ fi
 for bashrc in $HOME/.bash.*; do
   [[ -f "${bashrc}" ]] && source "${bashrc}"
 done
-
-# Open tmux if installed
-if [[ -z "${TMUX}" && "${PLATFORM}" == "Darwin" ]]; then
-  command -v tmux >/dev/null && tm
-fi
