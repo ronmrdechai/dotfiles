@@ -37,6 +37,7 @@ fi
 PS1+='\[\033[37m\][\A \h \[\033[1m\]\[\033[4m\]\W\[\033[0m\]] \[\033[33m\]'
 PS1+='\$\[\033[0m\] '
 export PS1
+export PS0='$(test -n "$_show_command_start_time" && echo -e "[ \033[4m\A\033[0m ]\n\n")'
 
 # Homebrew options
 if [[ ${PLATFORM} == "Darwin" ]]; then
@@ -117,6 +118,14 @@ tm () {
     fi
   else
     tmux detach-client
+  fi
+}
+
+toggle-command-start-time () {
+  if [[ -n "$_show_command_start_time" ]]; then
+    unset _show_command_start_time
+  else
+    export _show_command_start_time=1
   fi
 }
 
