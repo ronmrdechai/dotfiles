@@ -18,7 +18,12 @@ export PATH="$PATH:$HOME/.bin"
 export PLATFORM=$(uname)
 export PYTHONWARNINGS=ignore
 
-[[ -d "$HOME/.vim/bin" ]] && PATH="$HOME/.vim/bin:$PATH"
+# Append to path
+append-to-path () { [[ -d "$1" ]] && PATH="$1:$PATH"; }
+append-to-path "$HOME/.vim/bin"
+append-to-path "$HOME/.bin"
+append-to-path "$HOME/bin"
+unset append-to-path
 
 # Prompt
 PROMPT_COMMAND='case $PWD in
