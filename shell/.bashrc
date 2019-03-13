@@ -19,11 +19,11 @@ export PLATFORM=$(uname)
 export PYTHONWARNINGS=ignore
 
 # Append to path
-append-to-path () { [[ -d "$1" ]] && PATH="$1:$PATH"; }
-append-to-path "$HOME/.vim/bin"
-append-to-path "$HOME/.bin"
-append-to-path "$HOME/bin"
-unset append-to-path
+appendpath () { [[ -d "$1" ]] && PATH="$1:$PATH"; }
+appendpath "$HOME/.vim/bin"
+appendpath "$HOME/.bin"
+appendpath "$HOME/bin"
+unset appendpath
 
 # Prompt
 PROMPT_COMMAND='case $PWD in
@@ -34,7 +34,7 @@ PROMPT_COMMAND='case $PWD in
         *) HPWD="$PWD";;
       esac'
 
-_show_command_time_prompt='$(test -n "$_show_command_time" && echo -e "[ \033[4m\A\033[0m ]\n\n")'
+_show_command_time_prompt="\$(test -n \"\$_show_command_time\" && echo -e \"[ \033[4m\A\033[0m ]\\n\\n\")"
 if [[ ${PLATFORM} == "Darwin" ]]; then
   scm_prompt="/opt/facebook/hg/share/scm-prompt.sh"
 else
