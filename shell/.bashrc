@@ -21,23 +21,33 @@ export PYTHONWARNINGS=ignore
 [[ -d "$HOME/.vim/bin" ]] && PATH="$HOME/.vim/bin:$PATH"
 
 # Prompt
-PS1=""
+PROMPT_COMMAND='case $PWD in
+        $HOME) HPWD="~";;
+        $HOME/*/*) HPWD="${PWD#"${PWD%/*/*}/"}";;
+        $HOME/*) HPWD="~/${PWD##*/}";;
+        /*/*/*) HPWD="${PWD#"${PWD%/*/*}/"}";;
+        *) HPWD="$PWD";;
+      esac'
+
+_show_command_time_prompt='$(test -n "$_show_command_time" && echo -e "[ \033[4m\A\033[0m ]\n\n")'
 if [[ ${PLATFORM} == "Darwin" ]]; then
   scm_prompt="/opt/facebook/hg/share/scm-prompt.sh"
 else
   scm_prompt="/usr/share/scm/scm-prompt.sh"
 fi
 
+export PS0="${_show_command_time_prompt}"
+
+PS1=""
+PS1="${_show_command_time_prompt}"
 if [[ -f "${scm_prompt}" ]]; then
   . ${scm_prompt}
   PS1+='\[\033[35m\]$(_scm_prompt "%s ")'
   unset scm_prompt
 fi
-
-PS1+='\[\033[37m\][\A \h \[\033[1m\]\[\033[4m\]\W\[\033[0m\]] \[\033[33m\]'
+PS1+='\[\033[37m\][\h \[\033[1m\]\[\033[4m\]$HPWD\[\033[0m\]\[\033[37m\]] \[\033[33m\]'
 PS1+='\$\[\033[0m\] '
 export PS1
-export PS0='$(test -n "$_show_command_start_time" && echo -e "[ \033[4m\A\033[0m ]\n\n")'
 
 # Homebrew options
 if [[ ${PLATFORM} == "Darwin" ]]; then
@@ -121,11 +131,11 @@ tm () {
   fi
 }
 
-toggle-command-start-time () {
-  if [[ -n "$_show_command_start_time" ]]; then
-    unset _show_command_start_time
+toggle-command-time () {
+  if [[ -n "$_show_command_time" ]]; then
+    unset _show_command_time
   else
-    export _show_command_start_time=1
+    export _show_command_time=1
   fi
 }
 
