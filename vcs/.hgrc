@@ -15,6 +15,7 @@ st = status
 l = ssl
 master = !$HG pull && $HG update master
 difftool = !for file in $(hg status -n); do hg vimdiff $file; done
+diffprev = diff -r .^
 
 [hint]
 ack = sl-short-headers
