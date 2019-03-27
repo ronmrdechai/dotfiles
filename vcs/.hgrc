@@ -10,17 +10,14 @@ word-diff = true
 [alias]
 bk = bookmark
 df = diff
-pl = pull
+pl = !$HG shelve --name pl; $HG pull && $HG rebase -d master && $HG unshelve --name pl
 st = status
 l = ssl
 master = !$HG pull && $HG update master
-difftool = !for file in $(hg status -n); do hg vimdiff $file; done
+difftool = !for file in $($HG status -n); do $HG vimdiff $file; done
 diffprev = diff -r .^
 
 [hint]
-ack = sl-short-headers
+ack = sl-short-headers undo
 
 %include ~/.hgrc-local
-
-[hint]
-ack = sl-short-headers undo
