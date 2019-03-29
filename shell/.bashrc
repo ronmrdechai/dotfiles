@@ -37,6 +37,7 @@ PROMPT_COMMAND='case $PWD in
 _show_command_time_prompt="\$(test -n \"\$_show_command_time\" && echo -e \"[ \033[4m\A\033[0m ]\\n\\n\")"
 if [[ ${PLATFORM} == "Darwin" ]]; then
   scm_prompt="/opt/facebook/hg/share/scm-prompt.sh"
+  git_prompt="/Applications/Xcode.app/Contents/Developer/usr/share/git-core/git-prompt.sh"
 else
   scm_prompt="/usr/share/scm/scm-prompt.sh"
 fi
@@ -48,11 +49,16 @@ PS1="${_show_command_time_prompt}"
 if [[ -f "${scm_prompt}" ]]; then
   . ${scm_prompt}
   PS1+='\[\033[35m\]$(_scm_prompt "%s ")'
-  unset scm_prompt
+elif [[ -f "${git_prompt}" ]]; then
+  . ${git_prompt}
+  PS1+='\[\033[35m\]$(__git_ps1 "%s ")'
 fi
 PS1+='\[\033[37m\][\h \[\033[1m\]\[\033[4m\]$HPWD\[\033[0m\]\[\033[37m\]] \[\033[33m\]'
 PS1+='\$\[\033[0m\] '
 export PS1
+
+unset scm_prompt
+unset git_prompt
 
 # Homebrew options
 if [[ ${PLATFORM} == "Darwin" ]]; then
