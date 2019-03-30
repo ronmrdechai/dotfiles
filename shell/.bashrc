@@ -14,16 +14,8 @@ export PAGER=less
 export HISTCONTROL="ignoredups:erasedups"
 export LESSHISTFILE=-
 export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git --ignore .hg -g ""'
-export PATH="$PATH:$HOME/.bin"
 export PLATFORM=$(uname)
 export PYTHONWARNINGS=ignore
-
-# Edit path
-prependpath () { [[ -d "$1" ]] && PATH="$1:$PATH"; }
-prependpath "$HOME/.vim/bin"
-prependpath "$HOME/.bin"
-prependpath "$HOME/bin"
-unset prependpath
 
 # Prompt
 PROMPT_COMMAND='case $PWD in
@@ -56,15 +48,22 @@ fi
 PS1+='\[\033[37m\][\h \[\033[1m\]\[\033[4m\]$HPWD\[\033[0m\]\[\033[37m\]] \[\033[33m\]'
 PS1+='\$\[\033[0m\] '
 
-unset scm_prompt
-unset git_prompt
+# Edit path like variables
+pathedit () {
+  local var=$1
+  local elem=$2
+  eval $var="$elem:\$$var"
+}
+
+pathedit PATH "$HOME/.vim/bin"
+pathedit PATH "$HOME/.bin"
+pathedit PATH "$HOME/bin"
 
 # Homebrew options
 if [[ ${PLATFORM} == "Darwin" ]]; then
   export HOMEBREW_PREFIX="$HOME/.homebrew"
-  export PATH="$HOMEBREW_PREFIX/bin:$HOMEBREW_PREFIX/sbin:$PATH"
-  export MANPATH="$MANPATH:$HOMEBREW_PREFIX/share/man"
-  export MANPATH="$MANPATH:$HOMEBREW_PREFIX/manpages"
+  pathedit PATH "$HOMEBREW_PREFIX/bin:$HOMEBREW_PREFIX/sbin"
+  pathedit MANPATH "$HOMEBREW_PREFIX/share/man:$HOMEBREW_PREFIX/manpages"
   export HOMEBREW_NO_EMOJI=1
   export HOMEBREW_NO_ANALYTICS=1
   export HOMEBREW_NO_AUTO_UPDATE=1
@@ -76,7 +75,21 @@ if [[ ${PLATFORM} == "Darwin" ]]; then
     for file in $HOMEBREW_PREFIX/share/cmake/completions/*; do
       . $file
     done
+fi
+
+if [[ ${PLATFORM} = "Linux" ]]; then
+  # Custom LS_COLORS
+  [[ -f $HOME/.ls_colors ]] && eval $(dircolors -b $HOME/.ls_colors)
+
+  # Home directory Gentoo prefix or pkgsrc
+  if [[ -d "$HOME/gentoo" ]]; then
+    pathedit PATH "$HOME/gentoo/bin:$HOME/gentoo/sbin"
+    pathedit MANPATH "$HOME/gentoo/share/man"
+  elif [[ -d "$HOME/pkg" ]]; then
+    pathedit PATH "$HOME/pkg/bin:$HOME/pkg/sbin"
+    pathedit MANPATH "$HOME/pkg/share/man"
   fi
+fi
 
 # Aliases
 if [[ ${PLATFORM} == "Darwin" ]]; then
@@ -89,26 +102,17 @@ fi
 alias vi="vim"
 alias sudo="sudo "
 
-if [[ ${PLATFORM} = "Linux" ]]; then
-  # Custom LS_COLORS
-  [[ -f $HOME/.ls_colors ]] && eval $(dircolors -b $HOME/.ls_colors)
-
-  # Home directory Gentoo prefix or pkgsrc
-  if [[ -d "$HOME/gentoo" ]]; then
-    export PATH="$HOME/gentoo/bin:$HOME/gentoo/sbin:$PATH"
-    export MANPATH="$HOME/gentoo/share/man:$MANPATH"
-  elif [[ -d "$HOME/pkg" ]]; then
-    export PATH="$HOME/pkg/bin:$HOME/pkg/sbin:$PATH"
-    export MANPATH="$HOME/pkg/share/man:$MANPATH"
-  fi
-fi
-
 # Home directory bash completions
 if [[ -d "$HOME/.bash_completion.d" ]]; then
   for file in $HOME/.bash_completion.d/*; do
     source $file
   done
 fi
+
+# Unset helpers
+unset scm_prompt
+unset git_prompt
+unset pathedit
 
 # Edit and source ~/.bashrc
 bashrc () {
