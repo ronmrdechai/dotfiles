@@ -18,12 +18,12 @@ export PATH="$PATH:$HOME/.bin"
 export PLATFORM=$(uname)
 export PYTHONWARNINGS=ignore
 
-# Append to path
-appendpath () { [[ -d "$1" ]] && PATH="$1:$PATH"; }
-appendpath "$HOME/.vim/bin"
-appendpath "$HOME/.bin"
-appendpath "$HOME/bin"
-unset appendpath
+# Edit path
+prependpath () { [[ -d "$1" ]] && PATH="$1:$PATH"; }
+prependpath "$HOME/.vim/bin"
+prependpath "$HOME/.bin"
+prependpath "$HOME/bin"
+unset prependpath
 
 # Prompt
 PROMPT_COMMAND='case $PWD in
