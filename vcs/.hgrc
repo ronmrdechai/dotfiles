@@ -13,9 +13,8 @@ df = diff
 pl = !$HG shelve --name pl; $HG pull && $HG rebase -d master && $HG unshelve --name pl
 st = status
 l = ssl
-master = !$HG pull && $HG update master
-difftool = !for file in $($HG status -n); do $HG vimdiff $file; done
 diffprev = diff -r .^
+difflocal = diff --since-last-diff
 
 [hint]
 ack = sl-short-headers undo
