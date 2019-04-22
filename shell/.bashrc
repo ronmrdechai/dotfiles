@@ -13,7 +13,7 @@ export EDITOR=vim
 export PAGER=less
 export HISTCONTROL="ignoredups:erasedups"
 export LESSHISTFILE=-
-export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git --ignore .hg -g ""'
+export FZF_DEFAULT_COMMAND='rg --hidden --ignore .git --ignore .hg -g ""'
 export PLATFORM=$(uname)
 export PYTHONWARNINGS=ignore
 
@@ -93,8 +93,12 @@ fi
 
 # Aliases
 if [[ ${PLATFORM} == "Darwin" ]]; then
+  export JAVA_ROOT="/Library/Java/JavaVirtualMachines/"
+  export OPENJDK_HOME="$(find $JAVA_ROOT -maxdepth 1 -name openjdk* | tail -1)/Contents/Home"
+
   alias ls="ls -FG"
   alias ll="ls -FGAlh"
+  alias jshell="env JAVA_HOME=$OPENJDK_HOME jshell"
 else
   alias ls="ls --color=auto -F"
   alias ll="ls --color=auto -FAlh"
@@ -107,6 +111,12 @@ if [[ -d "$HOME/.bash_completion.d" ]]; then
   for file in $HOME/.bash_completion.d/*; do
     source $file
   done
+fi
+
+# Home directory prefix
+if [[ -d "$HOME/.prefix" ]]; then
+    pathedit PATH "$HOME/.prefix/bin:$HOME/.prefix/sbin"
+    pathedit MANPATH "$HOME/.prefix/share/man"
 fi
 
 # Unset helpers
@@ -144,6 +154,21 @@ tm () {
     tmux detach-client
   fi
 }
+
+vf () {
+  local files
+  IFS=$'\n' files=($(fzf --query="$1" --multi --select-1 --exit-0))
+  [[ -n "$files" ]] && ${EDITOR} "${files[@]}"
+}
+
+add-android-binutils () {
+  local toolchain=$1
+  local ndkdir=$(ls -d -1 /opt/android_ndk/* | sort | tail -1)
+  PATH="$PATH:${ndkdir}/toolchains/${toolchain}/prebuilt/darwin-x86_64/bin"
+}
+complete -W \
+  "$(\ls -1 $(\ls -d -1 /opt/android_ndk/* | sort | tail -1)/toolchains)" \
+  add-android-binutils
 
 toggle-command-time () {
   if [[ -n "$_show_command_time" ]]; then

@@ -10,13 +10,19 @@ word-diff = true
 [alias]
 bk = bookmark
 df = diff
-pl = !$HG shelve --name pl; $HG pull && $HG rebase -d master && $HG unshelve --name pl
+pl = pull
+master = rebase -d master
+warm = rebase -d warm
 st = status
+stprev = status --rev .^
 l = ssl
 diffprev = diff -r .^
-difflocal = diff --since-last-diff
+difflocal = diff --since-last-submit
 
 [hint]
 ack = sl-short-headers undo
 
 %include ~/.hgrc-local
+
+[hint]
+ack = sl-short-headers undo split-phabricator
