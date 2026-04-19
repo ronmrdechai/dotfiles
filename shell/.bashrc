@@ -30,13 +30,6 @@ _show_command_time_prompt='test -n "$_show_command_time" && echo -e "[ \033[4m$(
 PS0="\$(${_show_command_time_prompt} && echo -e \\n)"
 PROMPT_COMMAND+="; ${_show_command_time_prompt}"
 
-if [[ ${PLATFORM} == "Darwin" ]]; then
-  scm_prompt="/opt/facebook/hg/share/scm-prompt.sh"
-  git_prompt="/Applications/Xcode.app/Contents/Developer/usr/share/git-core/git-prompt.sh"
-else
-  scm_prompt="/usr/share/scm/scm-prompt.sh"
-fi
-
 PS1=""
 if [[ -f "${scm_prompt}" ]]; then
   . ${scm_prompt}
@@ -58,10 +51,12 @@ pathedit () {
 pathedit PATH "$HOME/.vim/bin"
 pathedit PATH "$HOME/.bin"
 pathedit PATH "$HOME/bin"
+pathedit PATH "$HOME/.cargo/bin"
+pathedit PATH "$HOME/.local/bin"
 
 # Homebrew options
 if [[ ${PLATFORM} == "Darwin" ]]; then
-  export HOMEBREW_PREFIX="$HOME/.homebrew"
+  export HOMEBREW_PREFIX="/opt/homebrew"
   pathedit PATH "$HOMEBREW_PREFIX/bin:$HOMEBREW_PREFIX/sbin"
   pathedit MANPATH "$HOMEBREW_PREFIX/share/man:$HOMEBREW_PREFIX/manpages"
   export HOMEBREW_NO_EMOJI=1
@@ -75,6 +70,7 @@ if [[ ${PLATFORM} == "Darwin" ]]; then
     for file in $HOMEBREW_PREFIX/share/cmake/completions/*; do
       . $file
     done
+  pathedit PATH /opt/homebrew/opt/coreutils/libexec/gnubin
 fi
 
 if [[ ${PLATFORM} = "Linux" ]]; then
@@ -92,17 +88,9 @@ if [[ ${PLATFORM} = "Linux" ]]; then
 fi
 
 # Aliases
-if [[ ${PLATFORM} == "Darwin" ]]; then
-  export JAVA_ROOT="/Library/Java/JavaVirtualMachines/"
-  export OPENJDK_HOME="$(find $JAVA_ROOT -maxdepth 1 -name openjdk* | tail -1)/Contents/Home"
-
-  alias ls="ls -FG"
-  alias ll="ls -FGAlh"
-  alias jshell="env JAVA_HOME=$OPENJDK_HOME jshell"
-else
-  alias ls="ls --color=auto -F"
-  alias ll="ls --color=auto -FAlh"
-fi
+alias ls="ls --color=auto -F"
+alias ll="ls --color=auto -FAlh"
+alias vim="nvim"
 alias vi="vim"
 alias sudo="sudo "
 
@@ -160,15 +148,6 @@ vf () {
   IFS=$'\n' files=($(fzf --query="$1" --multi --select-1 --exit-0))
   [[ -n "$files" ]] && ${EDITOR} "${files[@]}"
 }
-
-add-android-binutils () {
-  local toolchain=$1
-  local ndkdir=$(ls -d -1 /opt/android_ndk/* | sort | tail -1)
-  PATH="$PATH:${ndkdir}/toolchains/${toolchain}/prebuilt/darwin-x86_64/bin"
-}
-complete -W \
-  "$(\ls -1 $(\ls -d -1 /opt/android_ndk/* | sort | tail -1)/toolchains)" \
-  add-android-binutils
 
 toggle-command-time () {
   if [[ -n "$_show_command_time" ]]; then
