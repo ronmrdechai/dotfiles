@@ -9,8 +9,9 @@ shopt -s checkwinsize
 shopt -s no_empty_cmd_completion
 
 # General options
-export EDITOR=vim
+export EDITOR=nvim
 export PAGER=less
+export GIT_PAGER=less
 export HISTCONTROL="ignoredups:erasedups"
 export LESSHISTFILE=-
 export FZF_DEFAULT_COMMAND='rg --hidden --ignore .git --ignore .hg -g ""'
@@ -119,7 +120,7 @@ bashrc () {
 
 # Edit ~/.vimrc
 vimrc () {
-  $EDITOR $HOME/.vim/vimrc
+  $EDITOR $HOME/.config/nvim/init.lua
 }
 
 # Edit and source ~/.tmux.conf
@@ -141,6 +142,14 @@ tm () {
   else
     tmux detach-client
   fi
+}
+
+vc () {
+  ${EDITOR} $(git ls-files --others --exclude-standard && git diff --name-only --diff-filter=d HEAD^)
+}
+
+vd () {
+  ${EDITOR} $(git ls-files --others --exclude-standard && git diff --name-only --diff-filter=d)
 }
 
 vf () {

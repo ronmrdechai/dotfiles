@@ -1,19 +1,27 @@
 [alias]
-        amend = commit --all --amend --no-edit
+        amend = commit --amend --no-edit
+        am = amend
 	br = branch
 	ci = commit
 	co = checkout
 	df = diff --word-diff
 	dt = difftool
-	l = log --oneline --decorate --graph
+	l = log --oneline --decorate --graph --all -n 20
 	mt = mergetool
 	pl = pull
 	ps = push
 	root = rev-parse --show-toplevel
 	st = status -sb
    	cl = clone
+        diffprev = diff HEAD^
+        diffprevntest = diff HEAD^ -- . ':(exclude)*.test.*' ':(exclude)*.spec.*'
+        diffprevtest = diff HEAD^ -- '*.test.*' '*.spec.*'
+        diffntest = diff -- . ':(exclude)*.test.*' ':(exclude)*.spec.*'
+        difftest = diff -- '*.test.*' '*.spec.*'
+        stprev = diff --name-status HEAD^
+	git = !git
 [push]
-	default = simple
+	default = current
 [diff]
 	tool = vimdiff
 	guitool = opendiff
@@ -29,4 +37,4 @@
 	prompt = false
 	keepBackup = true
 [include]
-    path = ~/.gitconfig-local
+        path = ~/.gitconfig-local

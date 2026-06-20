@@ -9,6 +9,9 @@ set show-all-if-ambiguous on
 "\e[3;5~": delete-char
 "\e[3;2~": delete-char
 
+"§": "`"
+"±": "~"
+
 "\e\e": "\C-a\C-k"
 
 $if Bash
