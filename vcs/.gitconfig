@@ -7,6 +7,7 @@
 	df = diff --word-diff
 	dt = difftool
 	l = "!f() { if [ -r ~/.git-log-ci ]; then sh ~/.git-log-ci \"$@\"; else git log --oneline --decorate --graph --all -n 20 \"$@\"; fi; }; f"
+	land = "!sh ~/.git-land"
 	mt = mergetool
 	pl = pull
 	ps = push

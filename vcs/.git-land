@@ -1,0 +1,157 @@
+#!/bin/sh
+
+branch=${1:-$(git branch --show-current)}
+main=${2:-main}
+
+worktree_for_ref() {
+  ref=$1
+
+  git worktree list --porcelain | awk -v ref="$ref" '
+    /^worktree / { path = substr($0, 10) }
+    /^branch / {
+      branch = substr($0, 8)
+      if (branch == ref) {
+        print path
+        exit
+      }
+    }
+  '
+}
+
+is_linked_worktree() {
+  git_dir=$(git -C "$1" rev-parse --git-dir) || return 1
+  common_dir=$(git -C "$1" rev-parse --git-common-dir) || return 1
+
+  [ "$git_dir" != "$common_dir" ]
+}
+
+check_clean() {
+  if [ -n "$(git -C "$1" status --porcelain)" ]; then
+    echo "git land: worktree '$1' must be clean" >&2
+    exit 2
+  fi
+}
+
+if [ -z "$branch" ]; then
+  echo "usage: git land [branch] [main]" >&2
+  exit 2
+fi
+
+if [ "$branch" = "$main" ]; then
+  echo "git land: branch and main must differ" >&2
+  exit 2
+fi
+
+if ! git show-ref --verify --quiet "refs/heads/$branch"; then
+  echo "git land: branch '$branch' not found" >&2
+  exit 2
+fi
+
+if ! git show-ref --verify --quiet "refs/heads/$main"; then
+  echo "git land: main branch '$main' not found" >&2
+  exit 2
+fi
+
+current_worktree=$(git rev-parse --show-toplevel) || exit 2
+git_common_dir=$(git rev-parse --git-common-dir) || exit 2
+case $git_common_dir in
+  /*) ;;
+  *) git_common_dir=$current_worktree/$git_common_dir ;;
+esac
+
+branch_worktree=$(worktree_for_ref "refs/heads/$branch")
+main_worktree=$(worktree_for_ref "refs/heads/$main")
+orig_head=$(git symbolic-ref --quiet --short HEAD || git rev-parse --verify HEAD) || exit 2
+branch_ref=$(git rev-parse --verify "$branch") || exit 2
+main_ref=$(git rev-parse --verify "$main") || exit 2
+
+branch_checkout=${branch_worktree:-$current_worktree}
+main_checkout=${main_worktree:-$current_worktree}
+remove_worktree=
+
+check_clean "$branch_checkout"
+if [ "$main_checkout" != "$branch_checkout" ]; then
+  check_clean "$main_checkout"
+fi
+
+if [ -n "$branch_worktree" ] && is_linked_worktree "$branch_worktree"; then
+  remove_worktree=$branch_worktree
+fi
+
+restore() {
+  status=$1
+  trap - EXIT
+
+  if [ "$status" -ne 0 ]; then
+    echo "git land: failed; restoring repo state" >&2
+    git -C "$branch_checkout" rebase --abort >/dev/null 2>&1
+    git -C "$main_checkout" merge --abort >/dev/null 2>&1
+
+    git -C "$main_checkout" checkout -q "$main" >/dev/null 2>&1 &&
+      git -C "$main_checkout" reset --hard -q "$main_ref"
+
+    if git show-ref --verify --quiet "refs/heads/$branch"; then
+      git -C "$branch_checkout" checkout -q "$branch" >/dev/null 2>&1 &&
+        git -C "$branch_checkout" reset --hard -q "$branch_ref"
+    else
+      git branch -q "$branch" "$branch_ref" >/dev/null 2>&1
+    fi
+
+    git -C "$current_worktree" checkout -q "$orig_head" >/dev/null 2>&1 ||
+      git -C "$current_worktree" checkout -q "$main" >/dev/null 2>&1
+  fi
+
+  exit "$status"
+}
+
+trap 'restore $?' EXIT
+
+if [ -n "$branch_worktree" ]; then
+  git -C "$branch_checkout" rebase "$main"
+else
+  git -C "$branch_checkout" checkout "$branch" &&
+    git -C "$branch_checkout" rebase "$main"
+fi &&
+  if [ "$main_checkout" = "$branch_checkout" ]; then
+    git -C "$main_checkout" checkout "$main"
+  else
+    if [ -z "$branch_worktree" ]; then
+      git -C "$branch_checkout" checkout -q "$orig_head" >/dev/null 2>&1 ||
+        git -C "$branch_checkout" checkout -q --detach "$branch"
+    fi
+
+    git -C "$main_checkout" checkout "$main"
+  fi &&
+  git -C "$main_checkout" merge --ff-only "$branch" &&
+  git -C "$main_checkout" merge-base --is-ancestor "$branch" HEAD
+
+status=$?
+trap - EXIT
+
+if [ "$status" -ne 0 ]; then
+  restore "$status"
+fi
+
+if [ -n "$remove_worktree" ]; then
+  if [ "$current_worktree" = "$remove_worktree" ]; then
+    cd "$(dirname "$remove_worktree")" || exit 2
+  fi
+
+  git --git-dir="$git_common_dir" worktree remove "$remove_worktree"
+  status=$?
+
+  if [ "$status" -ne 0 ]; then
+    if [ -z "$(worktree_for_ref "refs/heads/$branch")" ]; then
+      echo "git land: landed '$branch' and removed Git's worktree registration" >&2
+      echo "git land: failed to delete leftover files in '$remove_worktree'" >&2
+      git --git-dir="$git_common_dir" branch -D "$branch"
+    else
+      echo "git land: landed '$branch', but failed to remove worktree '$remove_worktree'" >&2
+      echo "git land: leaving branch '$branch' in place" >&2
+    fi
+
+    exit "$status"
+  fi
+fi
+
+git --git-dir="$git_common_dir" branch -D "$branch"
