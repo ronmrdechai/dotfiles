@@ -6,7 +6,7 @@
 	co = checkout
 	df = diff --word-diff
 	dt = difftool
-	l = log --oneline --decorate --graph --all -n 20
+	l = "!f() { if [ -r ~/.git-log-ci ]; then sh ~/.git-log-ci \"$@\"; else git log --oneline --decorate --graph --all -n 20 \"$@\"; fi; }; f"
 	mt = mergetool
 	pl = pull
 	ps = push

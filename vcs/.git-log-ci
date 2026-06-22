@@ -1,0 +1,228 @@
+#!/bin/sh
+
+marker=$(printf '\037')
+tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/git-l-ci.XXXXXX") || exit 1
+
+cleanup() {
+  rm -rf "$tmpdir"
+}
+trap cleanup EXIT HUP INT TERM
+
+if [ -t 1 ]; then
+  color=always
+  links=1
+  badge_color=1
+else
+  color=never
+  links=0
+  badge_color=0
+fi
+
+format="${marker}%H${marker}%C(auto)%h%d %s%C(reset)"
+
+if ! git log --color="$color" --graph --decorate --all -n 20 "$@" --abbrev-commit --format="$format" > "$tmpdir/log"; then
+  exit $?
+fi
+
+case ${GIT_L_CI_LINKS:-auto} in
+  always)
+    links=1
+    ;;
+  never)
+    links=0
+    ;;
+esac
+
+case ${GIT_L_CI_COLORS:-auto} in
+  always)
+    badge_color=1
+    ;;
+  never)
+    badge_color=0
+    ;;
+esac
+
+print_log() {
+  awk -v sep="$marker" -v statuses="$tmpdir/statuses" -v links="$links" -v badge_color="$badge_color" '
+    BEGIN {
+      FS = "\t"
+      esc = sprintf("%c", 27)
+      bel = sprintf("%c", 7)
+      while ((getline line < statuses) > 0) {
+        split(line, fields, "\t")
+        ci[fields[1]] = fields[2]
+        target[fields[1]] = fields[3]
+      }
+    }
+    function painted(text) {
+      if (!badge_color) {
+        return text
+      }
+      if (text == "✓") return esc "[1;32m" text esc "[0m"
+      if (text == "✗") return esc "[1;31m" text esc "[0m"
+      if (text == "…") return esc "[1;33m" text esc "[0m"
+      if (text == "○") return esc "[1;36m" text esc "[0m"
+      return text
+    }
+    function linked(url, text) {
+      if (!links || url == "") {
+        return text
+      }
+      return esc "]8;;" url bel text esc "]8;;" bel
+    }
+    {
+      count = split($0, parts, sep)
+      if (count >= 3) {
+        sha = parts[2]
+        if (sha in ci) {
+          print parts[1] linked(target[sha], painted(ci[sha])) " " parts[3]
+        } else {
+          print parts[1] "  " parts[3]
+        }
+      } else {
+        print
+      }
+    }
+  ' "$tmpdir/log"
+}
+
+github_remote() {
+  remote=${GIT_L_CI_REMOTE:-origin}
+  url=$(git config --get "remote.$remote.url" 2>/dev/null) || return 1
+
+  case "$url" in
+    git@*:*)
+      host=${url#git@}
+      host=${host%%:*}
+      path=${url#*:}
+      ;;
+    ssh://git@*/*)
+      rest=${url#ssh://git@}
+      host=${rest%%/*}
+      path=${rest#*/}
+      ;;
+    https://*/*/*|http://*/*/*)
+      rest=${url#*://}
+      rest=${rest#*@}
+      host=${rest%%/*}
+      path=${rest#*/}
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+
+  path=${path%.git}
+  owner=${path%%/*}
+  repo=${path#*/}
+  repo=${repo%%/*}
+
+  [ -n "$host" ] && [ -n "$owner" ] && [ -n "$repo" ] || return 1
+  printf '%s %s %s\n' "$host" "$owner" "$repo"
+}
+
+awk -v sep="$marker" '
+  {
+    count = split($0, parts, sep)
+    if (count >= 3 && !seen[parts[2]]++) {
+      print parts[2]
+    }
+  }
+' "$tmpdir/log" > "$tmpdir/shas"
+
+: > "$tmpdir/statuses"
+
+if [ -s "$tmpdir/shas" ] && command -v gh >/dev/null 2>&1 && remote_info=$(github_remote); then
+  set -- $remote_info
+  host=$1
+  owner=$2
+  repo=$3
+  query='query($owner: String!, $repo: String!) { repository(owner: $owner, name: $repo) {'
+  i=0
+
+  while IFS= read -r sha; do
+    query="$query c$i: object(oid: \"$sha\") { ... on Commit { statusCheckRollup { state contexts(first: 100) { nodes { __typename ... on CheckRun { status conclusion detailsUrl checkSuite { workflowRun { url } } } ... on StatusContext { state } } } } } }"
+    printf 'c%s %s\n' "$i" "$sha" >> "$tmpdir/aliases"
+    i=$((i + 1))
+  done < "$tmpdir/shas"
+
+  query="$query } }"
+
+  if [ "$i" -gt 0 ] &&
+     gh api --hostname "$host" graphql \
+       -f query="$query" \
+       -F owner="$owner" \
+       -F repo="$repo" \
+       --jq '
+         def url:
+           if .__typename == "CheckRun" then
+             (.checkSuite.workflowRun.url // .detailsUrl // "")
+           else
+             ""
+           end;
+         def bad:
+           if .__typename == "CheckRun" then
+             ((.conclusion // "") == "ACTION_REQUIRED" or
+              (.conclusion // "") == "CANCELLED" or
+              (.conclusion // "") == "FAILURE" or
+              (.conclusion // "") == "TIMED_OUT")
+           elif .__typename == "StatusContext" then
+             ((.state // "") == "ERROR" or (.state // "") == "FAILURE")
+           else
+             false
+           end;
+         def active:
+           if .__typename == "CheckRun" then
+             ((.status // "") != "COMPLETED")
+           elif .__typename == "StatusContext" then
+             ((.state // "") == "EXPECTED" or (.state // "") == "PENDING")
+           else
+             false
+           end;
+         .data.repository | to_entries[] |
+           .key as $key |
+           (.value.statusCheckRollup.state // "") as $state |
+           (.value.statusCheckRollup.contexts.nodes // []) as $nodes |
+           ([
+             (if ($state == "ERROR" or $state == "FAILURE") then
+               ($nodes[]? | select(.__typename == "CheckRun" and bad) | url | select(. != ""))
+             else empty end),
+             (if ($state == "EXPECTED" or $state == "PENDING") then
+               ($nodes[]? | select(.__typename == "CheckRun" and active) | url | select(. != ""))
+             else empty end),
+             ($nodes[]? | select(.__typename == "CheckRun") | url | select(. != ""))
+           ][0] // "") as $url |
+           [$key, $state, $url] | @tsv
+       ' \
+       > "$tmpdir/states" 2>/dev/null; then
+    awk -v host="$host" -v owner="$owner" -v repo="$repo" '
+      NR == FNR {
+        sha[$1] = $2
+        next
+      }
+      function github_url(url) {
+        return index(url, "https://" host "/") == 1 || index(url, "http://" host "/") == 1
+      }
+      function fallback_url(sha) {
+        return "https://" host "/" owner "/" repo "/commit/" sha "/checks"
+      }
+      function badge(state) {
+        if (state == "SUCCESS") return "✓"
+        if (state == "FAILURE") return "✗"
+        if (state == "ERROR") return "✗"
+        if (state == "PENDING") return "…"
+        if (state == "EXPECTED") return "○"
+        return ""
+      }
+      {
+        label = badge($2)
+        if (label != "" && $1 in sha) {
+          url = github_url($3) ? $3 : fallback_url(sha[$1])
+          print sha[$1] "\t" label "\t" url
+        }
+      }
+    ' "$tmpdir/aliases" "$tmpdir/states" > "$tmpdir/statuses"
+  fi
+fi
+
+print_log
