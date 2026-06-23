@@ -39,3 +39,6 @@
 	keepBackup = true
 [include]
         path = ~/.gitconfig-local
+[user]
+	name = Ron Mordechai
+	email = ronmrdechai@gmail.com
