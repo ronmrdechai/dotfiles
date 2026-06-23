@@ -3,7 +3,7 @@
 
 # Set shell options
 shopt -s cdspell
-shopt -s direxpand
+shopt -s direxpand 2>/dev/null || true
 shopt -s histappend
 shopt -s checkwinsize
 shopt -s no_empty_cmd_completion
