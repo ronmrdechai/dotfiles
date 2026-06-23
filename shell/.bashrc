@@ -42,6 +42,15 @@ if [[ ${PLATFORM} == "Darwin" ]]; then
       [[ -f "${git_prompt}" ]] && break
     done
   fi
+  if [[ -z "${git_completion:-}" ]]; then
+    for git_completion in \
+      /Library/Developer/CommandLineTools/usr/share/git-core/git-completion.bash \
+      /Applications/Xcode.app/Contents/Developer/usr/share/git-core/git-completion.bash \
+      /opt/homebrew/etc/bash_completion.d/git-completion.bash \
+      /usr/local/etc/bash_completion.d/git-completion.bash; do
+      [[ -f "${git_completion}" ]] && break
+    done
+  fi
 else
   scm_prompt="${scm_prompt:-/usr/share/scm/scm-prompt.sh}"
   if [[ -z "${git_prompt:-}" ]]; then
@@ -52,14 +61,25 @@ else
       [[ -f "${git_prompt}" ]] && break
     done
   fi
+  if [[ -z "${git_completion:-}" ]]; then
+    for git_completion in \
+      /usr/share/bash-completion/completions/git \
+      /usr/share/git-core/contrib/completion/git-completion.bash \
+      /usr/share/git/completion/git-completion.bash \
+      /etc/bash_completion.d/git; do
+      [[ -f "${git_completion}" ]] && break
+    done
+  fi
 fi
+
+[[ -f "${git_completion}" ]] && . "${git_completion}"
 
 PS1=""
 if [[ -f "${scm_prompt}" ]]; then
   . "${scm_prompt}"
   PS1+='\[\033[35m\]$(_scm_prompt "%s ")'
 elif [[ -f "${git_prompt}" ]]; then
-  . ${git_prompt}
+  . "${git_prompt}"
   PS1+='\[\033[35m\]$(__git_ps1 "%s ")'
 fi
 PS1+='\[\033[37m\][\h \[\033[1m\]\[\033[4m\]$HPWD\[\033[0m\]\[\033[37m\]] \[\033[33m\]'
@@ -134,6 +154,7 @@ fi
 # Unset helpers
 unset scm_prompt
 unset git_prompt
+unset git_completion
 unset pathedit
 
 # Edit and source ~/.bashrc
