@@ -31,9 +31,32 @@ _show_command_time_prompt='test -n "$_show_command_time" && echo -e "[ \033[4m$(
 PS0="\$(${_show_command_time_prompt} && echo -e \\n)"
 PROMPT_COMMAND+="; ${_show_command_time_prompt}"
 
+if [[ ${PLATFORM} == "Darwin" ]]; then
+  scm_prompt="${scm_prompt:-/opt/facebook/hg/share/scm-prompt.sh}"
+  if [[ -z "${git_prompt:-}" ]]; then
+    for git_prompt in \
+      /Library/Developer/CommandLineTools/usr/share/git-core/git-prompt.sh \
+      /Applications/Xcode.app/Contents/Developer/usr/share/git-core/git-prompt.sh \
+      /opt/homebrew/etc/bash_completion.d/git-prompt.sh \
+      /usr/local/etc/bash_completion.d/git-prompt.sh; do
+      [[ -f "${git_prompt}" ]] && break
+    done
+  fi
+else
+  scm_prompt="${scm_prompt:-/usr/share/scm/scm-prompt.sh}"
+  if [[ -z "${git_prompt:-}" ]]; then
+    for git_prompt in \
+      /usr/share/git-core/contrib/completion/git-prompt.sh \
+      /usr/share/git/completion/git-prompt.sh \
+      /etc/bash_completion.d/git-prompt; do
+      [[ -f "${git_prompt}" ]] && break
+    done
+  fi
+fi
+
 PS1=""
 if [[ -f "${scm_prompt}" ]]; then
-  . ${scm_prompt}
+  . "${scm_prompt}"
   PS1+='\[\033[35m\]$(_scm_prompt "%s ")'
 elif [[ -f "${git_prompt}" ]]; then
   . ${git_prompt}
