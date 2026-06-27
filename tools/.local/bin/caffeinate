@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_PATH="${AMPHETAMINE_APP:-/Applications/Amphetamine.app}"
+OSASCRIPT="${OSASCRIPT:-osascript}"
+
+show_usage() {
+  cat <<'EOF'
+usage: caffeinate [-dimsu] [-t timeout] [-w pid] [utility arguments...]
+
+Starts an Amphetamine session while the requested timeout, process, or utility
+runs. If no lifetime is supplied, the session remains active until this command
+is interrupted.
+
+Options:
+  -d            prevent display sleep
+  -i            prevent idle sleep (default when no assertion flags are given)
+  -m            accepted for caffeinate compatibility; Amphetamine has no
+                disk-idle-sleep AppleScript control
+  -s            prevent system sleep through a normal Amphetamine session;
+                Amphetamine has no AC-power-only AppleScript control
+  -u            treated as display-sleep prevention; when used alone without
+                -t, -w, or a utility, defaults to 5 seconds like caffeinate
+  -t timeout    keep the session for timeout seconds; ignored for utilities
+  -w pid        keep the session until pid exits; ignored for utilities
+  -h            show this help
+EOF
+}
+
+die() {
+  printf 'caffeinate: %s\n' "$*" >&2
+  exit 2
+}
+
+is_nonnegative_integer() {
+  [[ "${1:-}" =~ ^[0-9]+$ ]]
+}
+
+start_session() {
+  local display_sleep_allowed=$1
+  local app_ref
+
+  app_ref=$(apple_script_string "$APP_PATH")
+
+  "$OSASCRIPT" \
+    -e "using terms from application $app_ref" \
+    -e "tell application $app_ref to start new session with options {duration:0, interval:0, displaySleepAllowed:$display_sleep_allowed}" \
+    -e "end using terms from"
+}
+
+end_session() {
+  local app_ref
+
+  app_ref=$(apple_script_string "$APP_PATH")
+
+  "$OSASCRIPT" \
+    -e "using terms from application $app_ref" \
+    -e "tell application $app_ref to end session" \
+    -e "end using terms from"
+}
+
+apple_script_string() {
+  local value=${1//\\/\\\\}
+  value=${value//\"/\\\"}
+  printf '"%s"' "$value"
+}
+
+wait_for_pid() {
+  local pid=$1
+  local timeout=${2:-}
+  local started
+
+  started=$(date +%s)
+  while kill -0 "$pid" 2>/dev/null; do
+    if [[ -n "$timeout" ]]; then
+      local now
+      now=$(date +%s)
+      if (( now - started >= timeout )); then
+        return 0
+      fi
+    fi
+    sleep 1
+  done
+}
+
+sleep_forever() {
+  while true; do
+    sleep 86400 &
+    wait "$!" || true
+  done
+}
+
+display_sleep_allowed=true
+timeout=""
+wait_pid=""
+flag_d=false
+flag_i=false
+flag_m=false
+flag_s=false
+flag_u=false
+
+while getopts ":dimsut:w:h" opt; do
+  case "$opt" in
+    d)
+      flag_d=true
+      display_sleep_allowed=false
+      ;;
+    i)
+      flag_i=true
+      ;;
+    m)
+      flag_m=true
+      ;;
+    s)
+      flag_s=true
+      ;;
+    u)
+      flag_u=true
+      display_sleep_allowed=false
+      ;;
+    t)
+      is_nonnegative_integer "$OPTARG" || die "-t timeout must be a non-negative integer"
+      timeout=$OPTARG
+      ;;
+    w)
+      [[ "$OPTARG" =~ ^[1-9][0-9]*$ ]] || die "-w pid must be a positive integer"
+      wait_pid=$OPTARG
+      ;;
+    h)
+      show_usage
+      exit 0
+      ;;
+    :)
+      die "option -$OPTARG requires an argument"
+      ;;
+    \?)
+      die "unknown option -$OPTARG"
+      ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+if ! $flag_d && ! $flag_i && ! $flag_m && ! $flag_s && ! $flag_u; then
+  flag_i=true
+fi
+
+if $flag_u && ! $flag_d && ! $flag_i && ! $flag_m && ! $flag_s && [[ -z "$timeout" && -z "$wait_pid" && $# -eq 0 ]]; then
+  timeout=5
+fi
+
+session_started=false
+cleanup() {
+  local status=$?
+  trap - EXIT
+  if $session_started; then
+    end_session >/dev/null 2>&1 || true
+  fi
+  exit "$status"
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+
+start_session "$display_sleep_allowed"
+session_started=true
+
+if [[ $# -gt 0 ]]; then
+  "$@"
+  exit $?
+fi
+
+if [[ -n "$wait_pid" ]]; then
+  wait_for_pid "$wait_pid" "$timeout"
+elif [[ -n "$timeout" ]]; then
+  sleep "$timeout"
+else
+  sleep_forever
+fi
