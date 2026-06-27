@@ -52,6 +52,7 @@ print_log() {
         split(line, fields, "\t")
         ci[fields[1]] = fields[2]
         target[fields[1]] = fields[3]
+        has_ci = 1
       }
     }
     function painted(text) {
@@ -74,10 +75,14 @@ print_log() {
       count = split($0, parts, sep)
       if (count >= 3) {
         sha = parts[2]
-        if (sha in ci) {
-          print parts[1] linked(target[sha], painted(ci[sha])) " " parts[3]
+        if (has_ci) {
+          if (sha in ci) {
+            print parts[1] linked(target[sha], painted(ci[sha])) " " parts[3]
+          } else {
+            print parts[1] "  " parts[3]
+          }
         } else {
-          print parts[1] "  " parts[3]
+          print parts[1] parts[3]
         }
       } else {
         print
